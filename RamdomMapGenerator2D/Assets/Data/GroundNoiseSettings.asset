@@ -12,10 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f788a58d24e42fb4bbbf1fd5079f807a, type: 3}
   m_Name: GroundNoiseSettings
   m_EditorClassIdentifier: 
-  startFrequency: 0.1
-  octaves: 2
+  startFrequency: 0.15
+  octaves: 3
   persistance: 0.5
-  frequencyModifier: 1.2
+  frequencyModifier: 5
   offset: {x: 0, y: 0}
   noiseRangeMin: 0
-  noiseRangeMax: 30
+  noiseRangeMax: 50

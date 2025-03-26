@@ -12,7 +12,8 @@ public class MapGenerator : MonoBehaviour
     [Header("Map")]
     [SerializeField] private int _mapLength = 0;           // ±Ê¿Ã
     [SerializeField] private float _amplitude = 1;          // ¡¯∆¯
-    [SerializeField] private float _frequency = 0.01f;      // ∫Ûµµ
+    //[SerializeField] private float _frequency = 0.01f;      // ∫Ûµµ
+    [SerializeField] private Transform _gridTrans = null;
 
     [Header("Tile")]
     [SerializeField] private TileBase _tileDirt = null;
@@ -32,6 +33,7 @@ public class MapGenerator : MonoBehaviour
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
+        _gridTrans.position = Vector3.zero;
         GenerareMap();
     }
 
@@ -39,7 +41,13 @@ public class MapGenerator : MonoBehaviour
     // ≥Î¿Ã¡Ó º± ∏∏µÂ¥¬ ∏ﬁº“µÂ
     public void GenerareMap()
     {
+        float sizeY = Camera.main.orthographicSize;
+        float sizeX = Camera.main.orthographicSize * Camera.main.aspect;
+
         _mapRenderer.ClearGroundTileMap();
+
+        _mapLength = Mathf.RoundToInt(sizeX * 2);
+
         for (int x = 0; x < _mapLength; x++)
         {
             //Dirt
@@ -58,7 +66,7 @@ public class MapGenerator : MonoBehaviour
             {
                 // Perlin
                 var noisePerlin2D = SumNoise(_perlin2DData.offset.x + x, y, _perlin2DData);
-                if (y >= _perlin2DData.noiseRangeMin && y <= _perlin2DData.noiseRangeMax && 
+                if (y >= _perlin2DData.noiseRangeMin && y <= _perlin2DData.noiseRangeMax &&
                     noisePerlin2D > _noiseThresholdMin && noisePerlin2D < _noiseThresholdMax)
                 {
                     //_mapRenderer.SetPerlin2D(x, y, _tilePerlin2D);
@@ -66,9 +74,11 @@ public class MapGenerator : MonoBehaviour
                 }
 
                 TileBase selectTile = SelectTile(y, noiseEndValue, noiseStoneInt);
-                _mapRenderer.SetGroundTile(x,y, selectTile);
+                _mapRenderer.SetGroundTile(x, y, selectTile);
             }
         }
+        // Position
+        _gridTrans.position = new Vector3(-sizeX, -sizeY);
     }
 
     [ContextMenu("Generate Perlin2D")]
@@ -116,9 +126,9 @@ public class MapGenerator : MonoBehaviour
 
     public float SumNoise(int x, int y , NoiseDataS0 noiseSettings)
     {
-        float amplitude = 1f;
-        float frequnecy = noiseSettings.startFrequency;
-        float noiseSum = 0;
+        float amplitude = _amplitude;                             // ¡¯∆¯
+        float frequnecy = noiseSettings.startFrequency;      // ∫Ûµµ
+        float noiseSum = 0;             
         float amplitudeSum = 0;
 
         for(int i =0; i < noiseSettings.octaves; i++)
