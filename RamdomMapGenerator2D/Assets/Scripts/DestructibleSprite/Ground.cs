@@ -85,9 +85,23 @@ public class Ground : MonoBehaviour
         _newTexture.Apply();
         MakeSprtie();
 
+        if (IsTransparent(_newTexture))
+            Destroy(gameObject);
+
         Destroy(gameObject.GetComponent<PolygonCollider2D>());
         gameObject.AddComponent<PolygonCollider2D>();
     }
+
+    // ¶¥ÀÌ ¸ðµÎ ÆÄ±«µÆ´ÂÁö È®ÀÎÇÏ±â
+    bool IsTransparent(Texture2D tex)
+    { 
+        for (int x = 0; x < tex.width; x++) 
+            for (int y = 0; y < tex.height; y++)
+                if (tex.GetPixel(x, y).a != 0) 
+                    return false; 
+        return true; 
+    }
+
     private void OnTriggerEnter2D(Collider2D collision)
     {
         CircleCollider2D bomb = collision.gameObject.GetComponent<CircleCollider2D>();

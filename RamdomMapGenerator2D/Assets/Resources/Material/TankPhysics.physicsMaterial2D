@@ -6,9 +6,9 @@ PhysicsMaterial2D:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: PhysicsTank
+  m_Name: TankPhysics
   serializedVersion: 2
-  friction: 10
+  friction: 100
   bounciness: 0
   m_FrictionCombine: 1
   m_BounceCombine: 4
