@@ -48,36 +48,83 @@ public class Player : MonoBehaviour
 
         Vector2 ray1 = new Vector2(center.x - _colider2D.radius, center.y);
         Vector2 ray2 = new Vector2(center.x + _colider2D.radius, center.y);
-        Vector2 ray3 = center;
+        Vector2 ray3 = new Vector2(center.x - (_colider2D.radius / 2f), center.y);
+        Vector2 ray4 = new Vector2(center.x + (_colider2D.radius / 2f), center.y);
+        Vector2 ray5 = center;
 
-        Debug.DrawRay(ray1, -transform.up * 1.5f, Color.red);
-        Debug.DrawRay(ray2, -transform.up * 1.5f, Color.red);
-        Debug.DrawRay(ray3, -transform.up * 1.5f, Color.green);
+        Debug.DrawRay(ray1, -transform.up * 0.9f, Color.red);
+        Debug.DrawRay(ray2, -transform.up * 0.9f, Color.blue);
+        Debug.DrawRay(ray3, -transform.up * 0.9f, Color.green);
+        Debug.DrawRay(ray4, -transform.up * 0.9f, Color.yellow);
+        Debug.DrawRay(ray5, -transform.up * 0.9f, Color.magenta);
 
         Vector2 direction = (Vector2)transform.up * -1f;
 
-        RaycastHit2D leftHit = Physics2D.Raycast(ray1, direction, 1.5f, LayerMask.GetMask("Ground"));
-        RaycastHit2D rightHit = Physics2D.Raycast(ray2, direction, 1.5f, LayerMask.GetMask("Ground"));
-        RaycastHit2D middleHit = Physics2D.Raycast(ray3, direction, 1.5f, LayerMask.GetMask("Ground"));
+        RaycastHit2D leftHit = Physics2D.Raycast(ray1, direction, 0.9f, LayerMask.GetMask("Ground"));
+        RaycastHit2D rightHit = Physics2D.Raycast(ray2, direction, 0.9f, LayerMask.GetMask("Ground"));
+        RaycastHit2D middleLeftHit = Physics2D.Raycast(ray3, direction, 0.9f, LayerMask.GetMask("Ground"));
+        RaycastHit2D middleRightHit = Physics2D.Raycast(ray4, direction, 0.9f, LayerMask.GetMask("Ground"));
+        RaycastHit2D middle = Physics2D.Raycast(ray5, direction, 0.9f, LayerMask.GetMask("Ground"));
 
-        RaycastHit2D bestHit = middleHit.collider != null ? middleHit : (leftHit.collider != null ? leftHit : rightHit);
 
-        if (bestHit.collider != null)
+        // leftHit 또는 rightHit가 없을 경우 middleLeftHit 또는 middleRightHit를 대체
+        if (leftHit.collider == null)
         {
-            Vector2 normal = bestHit.normal; // 선택된 법선 벡터 사용
+            if (middleLeftHit.collider != null)
+            {
+                leftHit = middleLeftHit;
+            }
+            else
+            {
+                leftHit = middle;
+            }
+        }
+
+        if (rightHit.collider == null)
+        {
+            if(middleRightHit.collider != null)
+            {
+                rightHit = middleRightHit;
+            }
+            else
+            {
+                rightHit = middle;
+            }
+        }
+
+        if (leftHit.collider != null && rightHit.collider != null)
+        {
+            // 두 점의 차이를 이용해 수평 벡터 구함
+            Vector2 green = leftHit.point - rightHit.point;
+
+            // 90도 회전하여 법선 벡터 생성
+            Vector2 normal = new Vector2(green.y, -green.x);
+            normal.Normalize(); // 단위 벡터화
+
             float targetAngle = Mathf.Atan2(normal.y, normal.x) * Mathf.Rad2Deg - 90f; // 목표 회전 각도
 
             float currentAngle = transform.rotation.eulerAngles.z;
-            if (currentAngle > 180f) currentAngle -= 360f; // 음수 각도 변환
+         
+            if (currentAngle > 180f) 
+                currentAngle -= 360f; // 음수 각도 변환
 
             float minAngleChangeThreshold = 1f; // 너무 작은 각도 변화는 무시 (1도 이하)
 
-            //  모서리에서 떨림 방지를 위해 일정 각도 이상 차이날 때만 회전
+            // 목표 각도를 제한 각도까지
+            float maxAngle = _canMoveAngle - 0.1f; // 제한 각도 (0 ~ _canMoveAngle)
+            float minAngle = -_canMoveAngle + 0.1f; // 제한 각도의 음수 범위
+
+            // 제한 각도 내에서만 회전하도록 조건 추가
             if (Mathf.Abs(currentAngle - targetAngle) > minAngleChangeThreshold)
             {
+                // 제한 각도 초과 시 targetAngle 조정
+                targetAngle = Mathf.Clamp(targetAngle, minAngle, maxAngle);
+
+                // 목표 각도로 회전
                 transform.rotation = Quaternion.Euler(0, 0, targetAngle);
             }
         }
+
         return leftHit.collider != null || rightHit.collider != null;
     }
 
