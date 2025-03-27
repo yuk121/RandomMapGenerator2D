@@ -1,0 +1,90 @@
+using System.Collections.Generic;
+using UnityEngine;
+
+public class MapGenerator : MonoBehaviour
+{
+    private enum eMapType
+    {
+        None,
+        Jungle,
+        Desert,
+        Ice,
+        Max
+    }
+
+    [SerializeField] private List<GameObject> _mapPrefabList = new List<GameObject>();
+    [SerializeField] private List<Texture2D> _mapGroundTextureList = new List<Texture2D>();
+    [SerializeField] private Ground _mapGroundPrefab = null;
+
+    [SerializeField] private float _randGroundScaleMin = 0.5f;        // ÃÖ¼Ò ¶¥ Å©±â
+    [SerializeField] private float _randGroundScaleMax = 1.5f;       // ÃÖ´ë ¶¥ Å©±â
+
+    [Range(0.1f, 1f)]
+    [SerializeField] private float _groundUnderGenerationRatio;     // ¶¥ »ý¼º ºñÀ²
+
+    [SerializeField] private float _randGroundIntervalMin = 1f;       // ÃÖ¼Ò ¶¥ °£°Ý
+    [SerializeField] private float _randGroundIntervalMax = 3f;       // ÃÖ´ë ¶¥ °£°Ý
+
+
+    private eMapType _mapType = eMapType.None;
+
+    // Start is called once before the first execution of Update after the MonoBehaviour is created
+    void Start()
+    {
+        RandomMapGeneration();
+        RandomGroundGeneration();
+    }
+
+    public void RandomMapGeneration()
+    {
+        // ·£´ý ¼±ÅÃ
+        _mapType =(eMapType)Random.Range((int)eMapType.Jungle, (int)eMapType.Max);
+
+        // ¹è°æ »ý¼º
+        GameObject map = Instantiate(_mapPrefabList[(int)_mapType]);
+        map.transform.parent = this.transform;
+    }
+
+    private void RandomGroundGeneration()
+    {
+        // ¶¥°ú ÇÏ´Ã ±¸ºÐÇÏ±â
+        // ÇöÀç Ä«¸Þ¶ó ½ÃÁ¡ÀÇ ¿ùµå ÁÂÇ¥·Î ÇÏ±â
+        float height = Camera.main.orthographicSize;
+        float width = height * Camera.main.aspect;
+
+        // ¶¥ »ý¼º ¹üÀ§ (-width~width), (-height~0)
+   
+       
+        // ¶¥ »ý¼º
+        Ground ground = Instantiate(_mapGroundPrefab);
+        ground.transform.parent = this.transform;
+        ground.Init(_mapGroundTextureList[(int)_mapType]);
+
+        // ·£´ý Å©±â ºÎ¿©
+        float randScale = Random.Range(_randGroundScaleMin, _randGroundScaleMax);
+        ground.transform.localScale = ground.transform.localScale * randScale;
+
+        // ·£´ý ¶¥ °£°Ý
+        float randInterval = Random.Range(_randGroundIntervalMin, _randGroundIntervalMax);
+    }
+
+    //public float MakeNoise(int width, int height)
+    //{
+    //    float amplitude = _amplitude;                             // ÁøÆø
+    //    float frequnecy = noiseSettings.startFrequency;      // ºóµµ
+    //    float noiseSum = 0;
+    //    float amplitudeSum = 0;
+
+    //    for (int i = 0; i < noiseSettings.octaves; i++)
+    //    {
+    //        noiseSum += amplitude * Mathf.PerlinNoise(x * frequnecy, y * frequnecy);
+    //        amplitudeSum += amplitude;
+    //        amplitude *= noiseSettings.persistance;
+    //        frequnecy *= noiseSettings.frequencyModifier;
+    //    }
+
+    //    float nomalize = noiseSum / amplitudeSum; // [0 - 1]
+
+    //    return nomalize;
+    //}
+}

@@ -6,14 +6,17 @@ using UnityEngine;
 
 public class Player : MonoBehaviour
 {
-    [SerializeField] private float _canMoveAngle = 70f;
+    [SerializeField] private float _moveAngleThreshold = 70f;
     [SerializeField] private float _speed = 4f;
+    private Rigidbody2D _rb2D = null;
     private CircleCollider2D _colider2D = null;
     private float _dirX = 0;
+    private bool _isMoveAngle = false;
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
+        _rb2D = GetComponent<Rigidbody2D>();
         _colider2D = GetComponent<CircleCollider2D>();
     }
 
@@ -21,11 +24,12 @@ public class Player : MonoBehaviour
 
     private void Update()
     {
-        if (IsGround() && CanMoveAngle())
+        if (IsGround())
         {
             _dirX = Input.GetAxis("Horizontal");
 
-            transform.Translate(_dirX * _speed * Time.deltaTime, 0, 0);
+            //_rb2D.MovePosition(transform.position + new Vector3(_dirX * _speed * Time.deltaTime, 0));
+            transform.Translate(_dirX * _speed * Time.deltaTime, 0, 0, Space.World);
 
             if (_dirX != 0f)
             {
@@ -41,107 +45,87 @@ public class Player : MonoBehaviour
         }
     }
 
-
     private bool IsGround()
     {
+        // CircleCollider2D 중심 가져오기
         Vector2 center = (Vector2)_colider2D.bounds.center;
 
-        Vector2 ray1 = new Vector2(center.x - _colider2D.radius, center.y);
-        Vector2 ray2 = new Vector2(center.x + _colider2D.radius, center.y);
-        Vector2 ray3 = new Vector2(center.x - (_colider2D.radius / 2f), center.y);
-        Vector2 ray4 = new Vector2(center.x + (_colider2D.radius / 2f), center.y);
-        Vector2 ray5 = center;
+        // 항상 콜라이더의 기울기에 따라 ray 시작 위치를 계산
+        Vector2 ray1 = center + (Vector2)(-transform.right * _colider2D.radius); // 왼쪽 끝
+        Vector2 ray2 = center + (Vector2)(transform.right * _colider2D.radius);  // 오른쪽 끝
 
-        Debug.DrawRay(ray1, -transform.up * 0.9f, Color.red);
-        Debug.DrawRay(ray2, -transform.up * 0.9f, Color.blue);
-        Debug.DrawRay(ray3, -transform.up * 0.9f, Color.green);
-        Debug.DrawRay(ray4, -transform.up * 0.9f, Color.yellow);
-        Debug.DrawRay(ray5, -transform.up * 0.9f, Color.magenta);
+        float distance = 0.9f;// 0.75f;
 
+        // 시각화 
+        Debug.DrawRay(ray1, -transform.up * distance, Color.red);
+        Debug.DrawRay(ray2, -transform.up * distance, Color.blue);
+
+        // 방향
         Vector2 direction = (Vector2)transform.up * -1f;
 
-        RaycastHit2D leftHit = Physics2D.Raycast(ray1, direction, 0.9f, LayerMask.GetMask("Ground"));
-        RaycastHit2D rightHit = Physics2D.Raycast(ray2, direction, 0.9f, LayerMask.GetMask("Ground"));
-        RaycastHit2D middleLeftHit = Physics2D.Raycast(ray3, direction, 0.9f, LayerMask.GetMask("Ground"));
-        RaycastHit2D middleRightHit = Physics2D.Raycast(ray4, direction, 0.9f, LayerMask.GetMask("Ground"));
-        RaycastHit2D middle = Physics2D.Raycast(ray5, direction, 0.9f, LayerMask.GetMask("Ground"));
+        // Raycast
+        RaycastHit2D leftHit = Physics2D.Raycast(ray1, direction, distance, LayerMask.GetMask("Ground"));
+        RaycastHit2D rightHit = Physics2D.Raycast(ray2, direction, distance, LayerMask.GetMask("Ground"));
 
+        //Linecast 
+        //RaycastHit2D area = Physics2D.Linecast(ray1 + direction * distance, ray2 + direction * distance, LayerMask.GetMask("Ground"));
+        RaycastHit2D area = Physics2D.BoxCast(transform.position, new Vector2(_colider2D.radius * 2, _colider2D.radius * 2), 0f,direction, distance,LayerMask.GetMask("Ground"));
 
-        // leftHit 또는 rightHit가 없을 경우 middleLeftHit 또는 middleRightHit를 대체
-        if (leftHit.collider == null)
+        Debug.DrawLine(ray1 + direction * distance, ray2 + direction * distance, Color.magenta);
+
+        return leftHit.collider != null || rightHit.collider || area.collider != null; //hits.Length > 0f;
+    }
+
+    private void OnCollisionStay2D(Collision2D collision)
+    {
+        if (!collision.gameObject.CompareTag("Ground")) 
+            return; 
+
+        Vector2 averageNormal = Vector2.zero;
+        int contactCount = collision.contactCount;
+
+        // 모든 충돌 지점의 법선 벡터 합산
+        for (int i = 0; i < contactCount; i++)
         {
-            if (middleLeftHit.collider != null)
-            {
-                leftHit = middleLeftHit;
-            }
-            else
-            {
-                leftHit = middle;
-            }
+            averageNormal += collision.contacts[i].normal;
         }
 
-        if (rightHit.collider == null)
+        if (contactCount > 0)
         {
-            if(middleRightHit.collider != null)
-            {
-                rightHit = middleRightHit;
-            }
-            else
-            {
-                rightHit = middle;
-            }
-        }
+            averageNormal /= contactCount; // 평균값 계산
+            averageNormal.Normalize(); // 단위 벡터화
 
-        if (leftHit.collider != null && rightHit.collider != null)
-        {
-            // 두 점의 차이를 이용해 수평 벡터 구함
-            Vector2 green = leftHit.point - rightHit.point;
+            // 목표 회전 각도 계산
+            float targetAngle = Mathf.Atan2(averageNormal.y, averageNormal.x) * Mathf.Rad2Deg - 90f;
 
-            // 90도 회전하여 법선 벡터 생성
-            Vector2 normal = new Vector2(green.y, -green.x);
-            normal.Normalize(); // 단위 벡터화
-
-            float targetAngle = Mathf.Atan2(normal.y, normal.x) * Mathf.Rad2Deg - 90f; // 목표 회전 각도
-
-            float currentAngle = transform.rotation.eulerAngles.z;
-         
-            if (currentAngle > 180f) 
-                currentAngle -= 360f; // 음수 각도 변환
-
-            float minAngleChangeThreshold = 1f; // 너무 작은 각도 변화는 무시 (1도 이하)
-
-            // 목표 각도를 제한 각도까지
-            float maxAngle = _canMoveAngle - 0.1f; // 제한 각도 (0 ~ _canMoveAngle)
-            float minAngle = -_canMoveAngle + 0.1f; // 제한 각도의 음수 범위
-
-            // 제한 각도 내에서만 회전하도록 조건 추가
-            if (Mathf.Abs(currentAngle - targetAngle) > minAngleChangeThreshold)
-            {
-                // 제한 각도 초과 시 targetAngle 조정
-                targetAngle = Mathf.Clamp(targetAngle, minAngle, maxAngle);
-
-                // 목표 각도로 회전
+            _isMoveAngle = CanMoveAngle(targetAngle);
+ 
+            if (_isMoveAngle)
+            {          
                 transform.rotation = Quaternion.Euler(0, 0, targetAngle);
             }
         }
-
-        return leftHit.collider != null || rightHit.collider != null;
     }
 
-
-    private bool CanMoveAngle()
+    // 움직일 수 있는 각도인지 확인하는 함수
+    private bool CanMoveAngle(float targetAngle)
     {
-        float zRotation = transform.rotation.eulerAngles.z;
-
-        // 음수를 포함한 각도 계산
-        if (zRotation > 180f)
+        // 목표 각도도 같은 방식으로 변환
+        if (targetAngle > 180f)
         {
-            zRotation -= 360f; // 음수 각도로 변환
+            targetAngle -= 360f;
         }
 
-        if (Mathf.Abs(zRotation) <= _canMoveAngle)
-            return true;
+        // 허용된 기울기 내에 있는지 확인
+        return Mathf.Abs(targetAngle) <= _moveAngleThreshold;
+    }
 
-        return false;
+    void OnDrawGizmos()
+    {
+        if(_colider2D != null)
+        {
+            Vector2 pos = new Vector2(transform.position.x + _colider2D.offset.x, transform.position.y + _colider2D.offset.y);
+            Gizmos.DrawCube(pos, new Vector2(_colider2D.radius * 2, _colider2D.radius *2));
+        }
     }
 }

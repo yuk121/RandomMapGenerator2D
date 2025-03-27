@@ -6,7 +6,7 @@ public class Bomb : MonoBehaviour
     private GameObject _explosionRadius;
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
-    void Start()
+    protected virtual void Start()
     {
         _explosionRadius.SetActive(false);
     }

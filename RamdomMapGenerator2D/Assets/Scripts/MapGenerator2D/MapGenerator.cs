@@ -5,148 +5,150 @@ using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 
-public class MapGenerator : MonoBehaviour
+namespace PROCEDURAL_MAP
 {
-    [SerializeField] private MapRenderer _mapRenderer;
-
-    [Header("Map")]
-    [SerializeField] private int _mapLength = 0;           // 길이
-    [SerializeField] private float _amplitude = 1;          // 진폭
-    //[SerializeField] private float _frequency = 0.01f;      // 빈도
-    [SerializeField] private Transform _gridTrans = null;
-
-    [Header("Tile")]
-    [SerializeField] private TileBase _tileDirt = null;
-    [SerializeField] private TileBase _tileDirtGrass = null;
-    [SerializeField] private TileBase _tileStone = null;
-    [SerializeField] private TileBase _tileStoneGrass = null;
-    [SerializeField] private TileBase _tilePerlin2D = null;
-
-    [SerializeField] private float _noiseThresholdMin = 0.45f;
-    [SerializeField] private float _noiseThresholdMax = 0.55f;
-
-    [Header("Data")]
-    [SerializeField] private NoiseDataS0 _heightMapNoiseData;
-    [SerializeField] private NoiseDataS0 _stoneNoiseData;
-    [SerializeField] private NoiseDataS0 _perlin2DData;
-
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
-    void Start()
+    public class MapGenerator : MonoBehaviour
     {
-        _gridTrans.position = Vector3.zero;
-        GenerareMap();
-    }
+        [SerializeField] private MapRenderer _mapRenderer;
 
-    [ContextMenu("Map Generation")]
-    // 노이즈 선 만드는 메소드
-    public void GenerareMap()
-    {
-        float sizeY = Camera.main.orthographicSize;
-        float sizeX = Camera.main.orthographicSize * Camera.main.aspect;
+        [Header("Map")]
+        [SerializeField] private int _mapLength = 0;           // 길이
+        [SerializeField] private float _amplitude = 1;          // 진폭
+                                                                //[SerializeField] private float _frequency = 0.01f;      // 빈도
+        [SerializeField] private Transform _gridTrans = null;
 
-        _mapRenderer.ClearGroundTileMap();
+        [Header("Tile")]
+        [SerializeField] private TileBase _tileDirt = null;
+        [SerializeField] private TileBase _tileDirtGrass = null;
+        [SerializeField] private TileBase _tileStone = null;
+        [SerializeField] private TileBase _tileStoneGrass = null;
+        [SerializeField] private TileBase _tilePerlin2D = null;
 
-        _mapLength = Mathf.RoundToInt(sizeX * 2);
+        [SerializeField] private float _noiseThresholdMin = 0.45f;
+        [SerializeField] private float _noiseThresholdMax = 0.55f;
 
-        for (int x = 0; x < _mapLength; x++)
+        [Header("Data")]
+        [SerializeField] private NoiseDataS0 _heightMapNoiseData;
+        [SerializeField] private NoiseDataS0 _stoneNoiseData;
+        [SerializeField] private NoiseDataS0 _perlin2DData;
+
+        // Start is called once before the first execution of Update after the MonoBehaviour is created
+        void Start()
         {
-            //Dirt
-            var noise = SumNoise(_heightMapNoiseData.offset.x + x, 1, _heightMapNoiseData);
-            var noiseInRange = RangeMap(noise, 0, 1, _heightMapNoiseData.noiseRangeMin, _heightMapNoiseData.noiseRangeMax);
-
-            var noiseEndValue = Mathf.FloorToInt(noiseInRange);
-
-            // Stone
-            var noiseStone = SumNoise(_stoneNoiseData.offset.x + x, 1, _stoneNoiseData);
-            var noiseStoneInRange = RangeMap(noiseStone, 0, 1, _stoneNoiseData.noiseRangeMin, _stoneNoiseData.noiseRangeMax);
-
-            var noiseStoneInt = Mathf.FloorToInt(noiseStoneInRange);
-
-            for (int y = 0; y <= noiseEndValue; y++)
-            {
-                // Perlin
-                var noisePerlin2D = SumNoise(_perlin2DData.offset.x + x, y, _perlin2DData);
-                if (y >= _perlin2DData.noiseRangeMin && y <= _perlin2DData.noiseRangeMax &&
-                    noisePerlin2D > _noiseThresholdMin && noisePerlin2D < _noiseThresholdMax)
-                {
-                    //_mapRenderer.SetPerlin2D(x, y, _tilePerlin2D);
-                    continue;
-                }
-
-                TileBase selectTile = SelectTile(y, noiseEndValue, noiseStoneInt);
-                _mapRenderer.SetGroundTile(x, y, selectTile);
-            }
+            _gridTrans.position = Vector3.zero;
+            GenerareMap();
         }
-        // Position
-        _gridTrans.position = new Vector3(-sizeX, -sizeY);
-    }
 
-    [ContextMenu("Generate Perlin2D")]
-    public void GenerateMapPerlin2D()
-    {
-        _mapRenderer.ClearPerlin2DTileMap();
-
-        for (int x = -1 * _mapLength; x < _mapLength; x++)
+        [ContextMenu("Map Generation")]
+        // 노이즈 선 만드는 메소드
+        public void GenerareMap()
         {
-            for (int y = _perlin2DData.noiseRangeMin; y < _perlin2DData.noiseRangeMax; y++)
+            float sizeY = Camera.main.orthographicSize;
+            float sizeX = Camera.main.orthographicSize * Camera.main.aspect;
+
+            _mapRenderer.ClearGroundTileMap();
+
+            _mapLength = Mathf.RoundToInt(sizeX * 2);
+
+            for (int x = 0; x < _mapLength; x++)
             {
-                var noise = SumNoise(_perlin2DData.offset.x + x, y, _perlin2DData);
-                if (noise > _noiseThresholdMin && noise < _noiseThresholdMax)
+                //Dirt
+                var noise = SumNoise(_heightMapNoiseData.offset.x + x, 1, _heightMapNoiseData);
+                var noiseInRange = RangeMap(noise, 0, 1, _heightMapNoiseData.noiseRangeMin, _heightMapNoiseData.noiseRangeMax);
+
+                var noiseEndValue = Mathf.FloorToInt(noiseInRange);
+
+                // Stone
+                var noiseStone = SumNoise(_stoneNoiseData.offset.x + x, 1, _stoneNoiseData);
+                var noiseStoneInRange = RangeMap(noiseStone, 0, 1, _stoneNoiseData.noiseRangeMin, _stoneNoiseData.noiseRangeMax);
+
+                var noiseStoneInt = Mathf.FloorToInt(noiseStoneInRange);
+
+                for (int y = 0; y <= noiseEndValue; y++)
                 {
-                    _mapRenderer.SetPerlin2D(x, y, _tilePerlin2D);
+                    // Perlin
+                    var noisePerlin2D = SumNoise(_perlin2DData.offset.x + x, y, _perlin2DData);
+                    if (y >= _perlin2DData.noiseRangeMin && y <= _perlin2DData.noiseRangeMax &&
+                        noisePerlin2D > _noiseThresholdMin && noisePerlin2D < _noiseThresholdMax)
+                    {
+                        //_mapRenderer.SetPerlin2D(x, y, _tilePerlin2D);
+                        continue;
+                    }
+
+                    TileBase selectTile = SelectTile(y, noiseEndValue, noiseStoneInt);
+                    _mapRenderer.SetGroundTile(x, y, selectTile);
                 }
             }
+            // Position
+            _gridTrans.position = new Vector3(-sizeX, -sizeY);
         }
-    }
 
-    [ContextMenu("Map Clear")]
-    private void MapClear()
-    {
-        _mapRenderer.ClearGroundTileMap();
-        _mapRenderer.ClearPerlin2DTileMap();
-    }
-
-    private TileBase SelectTile(int y, int noiseEndValue, int stoneHeight)
-    {
-        if(y >= stoneHeight)
+        [ContextMenu("Generate Perlin2D")]
+        public void GenerateMapPerlin2D()
         {
-            // 맨 꼭대기
-            if (y == noiseEndValue)
-                return _tileStoneGrass;
+            _mapRenderer.ClearPerlin2DTileMap();
 
-            return _tileStone;
+            for (int x = -1 * _mapLength; x < _mapLength; x++)
+            {
+                for (int y = _perlin2DData.noiseRangeMin; y < _perlin2DData.noiseRangeMax; y++)
+                {
+                    var noise = SumNoise(_perlin2DData.offset.x + x, y, _perlin2DData);
+                    if (noise > _noiseThresholdMin && noise < _noiseThresholdMax)
+                    {
+                        _mapRenderer.SetPerlin2D(x, y, _tilePerlin2D);
+                    }
+                }
+            }
         }
-        else if(y == noiseEndValue)
+
+        [ContextMenu("Map Clear")]
+        private void MapClear()
         {
-            return _tileDirtGrass;
+            _mapRenderer.ClearGroundTileMap();
+            _mapRenderer.ClearPerlin2DTileMap();
         }
 
-        return _tileDirt;
-    }
-
-    public float SumNoise(int x, int y , NoiseDataS0 noiseSettings)
-    {
-        float amplitude = _amplitude;                             // 진폭
-        float frequnecy = noiseSettings.startFrequency;      // 빈도
-        float noiseSum = 0;             
-        float amplitudeSum = 0;
-
-        for(int i =0; i < noiseSettings.octaves; i++)
+        private TileBase SelectTile(int y, int noiseEndValue, int stoneHeight)
         {
-            noiseSum += amplitude * Mathf.PerlinNoise(x * frequnecy, y * frequnecy);
-            amplitudeSum += amplitude;
-            amplitude *= noiseSettings.persistance;
-            frequnecy *= noiseSettings.frequencyModifier;
+            if (y >= stoneHeight)
+            {
+                // 맨 꼭대기
+                if (y == noiseEndValue)
+                    return _tileStoneGrass;
+
+                return _tileStone;
+            }
+            else if (y == noiseEndValue)
+            {
+                return _tileDirtGrass;
+            }
+
+            return _tileDirt;
         }
 
-        float nomalize = noiseSum / amplitudeSum; // [0 - 1]
+        public float SumNoise(int x, int y, NoiseDataS0 noiseSettings)
+        {
+            float amplitude = _amplitude;                             // 진폭
+            float frequnecy = noiseSettings.startFrequency;      // 빈도
+            float noiseSum = 0;
+            float amplitudeSum = 0;
 
-        return nomalize;
-    }
+            for (int i = 0; i < noiseSettings.octaves; i++)
+            {
+                noiseSum += amplitude * Mathf.PerlinNoise(x * frequnecy, y * frequnecy);
+                amplitudeSum += amplitude;
+                amplitude *= noiseSettings.persistance;
+                frequnecy *= noiseSettings.frequencyModifier;
+            }
 
-    private float RangeMap(float inputValue, float inMin, float inMax, float outMin, float outMax)
-    {
-        return outMin + (inputValue - inMin) * (outMax - outMin) / (inMax - inMin);
-    }
-   
+            float nomalize = noiseSum / amplitudeSum; // [0 - 1]
+
+            return nomalize;
+        }
+
+        private float RangeMap(float inputValue, float inMin, float inMax, float outMin, float outMax)
+        {
+            return outMin + (inputValue - inMin) * (outMax - outMin) / (inMax - inMin);
+        }
+    }  
 }

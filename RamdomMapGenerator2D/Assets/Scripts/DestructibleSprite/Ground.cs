@@ -15,7 +15,17 @@ public class Ground : MonoBehaviour
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
+    
+    }
+
+    public void Init(Texture2D texture)
+    {
         _spriteRenderer = GetComponent<SpriteRenderer>();
+        
+        // 텍스쳐 할당
+        _srcTexture = texture;
+
+        // sprite로 생성
         _newTexture = new Texture2D(_srcTexture.width, _srcTexture.height, TextureFormat.RGBA32, false);
         _newTexture.SetPixels(_srcTexture.GetPixels());
 
@@ -92,6 +102,59 @@ public class Ground : MonoBehaviour
         gameObject.AddComponent<PolygonCollider2D>();
     }
 
+    public void MakeHoleEllipse(PolygonCollider2D collider2D)
+    {
+        BombEllipse bombEllipse = collider2D.transform.parent.gameObject.GetComponent<BombEllipse>();
+        if (bombEllipse == null)
+            return;
+
+        Vector2Int colliderCenter = WorldToPixel(collider2D.bounds.center);
+
+        float radiusX = bombEllipse.RadiusX;
+        float radiusY = radiusX / bombEllipse.RadiusYRatio;
+
+        int px, py, nx, ny;
+        int disY;
+
+        for (int i = 0; i <= radiusX; i++)
+        {
+            // 타원의 방정식 기반으로 y 범위 계산
+            disY = Mathf.RoundToInt(radiusY * Mathf.Sqrt(1 - (i * i) / (float)(radiusX * radiusX)));
+
+            for (int j = 0; j <= disY; j++)
+            {
+                px = colliderCenter.x + i;
+                nx = colliderCenter.x - i;
+                py = colliderCenter.y + j;
+                ny = colliderCenter.y - j;
+
+                if (px >= 0 && px < _pixelWidth && py >= 0 && py < _pixelHeight)
+                    _newTexture.SetPixel(px, py, Color.clear);
+
+                if (nx >= 0 && nx < _pixelWidth && py >= 0 && py < _pixelHeight)
+                    _newTexture.SetPixel(nx, py, Color.clear);
+
+                if (px >= 0 && px < _pixelWidth && ny >= 0 && ny < _pixelHeight)
+                    _newTexture.SetPixel(px, ny, Color.clear);
+
+                if (nx >= 0 && nx < _pixelWidth && ny >= 0 && ny < _pixelHeight)
+                    _newTexture.SetPixel(nx, ny, Color.clear);
+            }
+        }
+
+        _newTexture.Apply();
+        MakeSprtie();
+
+        if (IsTransparent(_newTexture))
+        {
+            Destroy(gameObject);
+            return;
+        }
+
+        Destroy(gameObject.GetComponent<PolygonCollider2D>());
+        gameObject.AddComponent<PolygonCollider2D>();
+    }
+
     // 땅이 모두 파괴됐는지 확인하기
     bool IsTransparent(Texture2D tex)
     { 
@@ -105,11 +168,13 @@ public class Ground : MonoBehaviour
     private void OnTriggerEnter2D(Collider2D collision)
     {
         CircleCollider2D bomb = collision.gameObject.GetComponent<CircleCollider2D>();
+        PolygonCollider2D bombEllipse = collision.gameObject.GetComponent<PolygonCollider2D>();
 
-        if (bomb == null)
-            return;
+        if (bomb != null)
+            MakeHole(bomb);
 
-        MakeHole(bomb);
+        if (bombEllipse != null)
+            MakeHoleEllipse(bombEllipse);
     }
   
     private void MakeSprtie()
