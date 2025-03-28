@@ -6,10 +6,19 @@ using UnityEngine;
 
 public class Player : MonoBehaviour
 {
+    [Header("Body")]
+    [SerializeField] private Transform _bodyTrans;
     [SerializeField] private float _moveAngleThreshold = 70f;
     [SerializeField] private float _speed = 4f;
+
+    [Header("Artillery")]
+    [SerializeField] private Transform _artilleryTrans;
+    [SerializeField] private float _minAngleArtillery = 0f;
+    [SerializeField] private float _maxAngleArtillery = 85f;
+
     private Rigidbody2D _rb2D = null;
     private CircleCollider2D _colider2D = null;
+    private float _dirY = 0;
     private float _dirX = 0;
     private bool _isMoveAngle = false;
 
@@ -24,24 +33,36 @@ public class Player : MonoBehaviour
 
     private void Update()
     {
-        if (IsGround())
+        _dirY = Input.GetAxis("Vertical");
+        // 새로운 회전값 계산 (현재 회전 + 입력값)
+       
+        float currentZ = _artilleryTrans.eulerAngles.z;
+        
+        if (currentZ > 180f) 
+            currentZ -= 360f; // 180° 이상이면 -180° ~ 0°로 변환
+
+        float newZ = Mathf.Clamp(currentZ + _dirY * Time.deltaTime * 100f, _minAngleArtillery, _maxAngleArtillery);
+        _artilleryTrans.rotation = Quaternion.Lerp(_artilleryTrans.rotation, Quaternion.Euler(0,0,newZ), Time.deltaTime * 10);
+
+        // 포 각도 조절중 움직일 수 없음
+        if (_dirY == 0 && IsGround())
         {
             _dirX = Input.GetAxis("Horizontal");
 
             //_rb2D.MovePosition(transform.position + new Vector3(_dirX * _speed * Time.deltaTime, 0));
-            transform.Translate(_dirX * _speed * Time.deltaTime, 0, 0, Space.World);
+            _bodyTrans.Translate(_dirX * _speed * Time.deltaTime, 0, 0, Space.World);
 
             if (_dirX != 0f)
             {
-                Vector3 newScale = transform.localScale;
+                Vector3 newScale = _bodyTrans.localScale;
                 newScale.x = Mathf.Abs(newScale.x) * Mathf.Sign(_dirX); // 좌우 반전
-                transform.localScale = newScale;
+                _bodyTrans.localScale = newScale;
             }
         }
         else
         {
             // 공중일땐 수평 
-            transform.rotation = Quaternion.Euler(0, 0, 0);
+            _bodyTrans.rotation = Quaternion.Euler(0, 0, 0);
         }
     }
 
@@ -51,14 +72,14 @@ public class Player : MonoBehaviour
         Vector2 center = (Vector2)_colider2D.bounds.center;
 
         // 항상 콜라이더의 기울기에 따라 ray 시작 위치를 계산
-        Vector2 ray1 = center + (Vector2)(-transform.right * _colider2D.radius); // 왼쪽 끝
-        Vector2 ray2 = center + (Vector2)(transform.right * _colider2D.radius);  // 오른쪽 끝
+        Vector2 ray1 = center + (Vector2)(-_bodyTrans.right * _colider2D.radius); // 왼쪽 끝
+        Vector2 ray2 = center + (Vector2)(_bodyTrans.right * _colider2D.radius);  // 오른쪽 끝
 
         float distance = 0.9f;// 0.75f;
 
         // 시각화 
-        Debug.DrawRay(ray1, -transform.up * distance, Color.red);
-        Debug.DrawRay(ray2, -transform.up * distance, Color.blue);
+        Debug.DrawRay(ray1, -_bodyTrans.up * distance, Color.red);
+        Debug.DrawRay(ray2, -_bodyTrans.up * distance, Color.blue);
 
         // 방향
         Vector2 direction = (Vector2)transform.up * -1f;
@@ -69,7 +90,7 @@ public class Player : MonoBehaviour
 
         //Linecast 
         //RaycastHit2D area = Physics2D.Linecast(ray1 + direction * distance, ray2 + direction * distance, LayerMask.GetMask("Ground"));
-        RaycastHit2D area = Physics2D.BoxCast(transform.position, new Vector2(_colider2D.radius * 2, _colider2D.radius * 2), 0f,direction, distance,LayerMask.GetMask("Ground"));
+        RaycastHit2D area = Physics2D.BoxCast(_bodyTrans.position, new Vector2(_colider2D.radius * 2, _colider2D.radius * 2), 0f,direction, distance,LayerMask.GetMask("Ground"));
 
         Debug.DrawLine(ray1 + direction * distance, ray2 + direction * distance, Color.magenta);
 
@@ -124,7 +145,7 @@ public class Player : MonoBehaviour
     {
         if(_colider2D != null)
         {
-            Vector2 pos = new Vector2(transform.position.x + _colider2D.offset.x, transform.position.y + _colider2D.offset.y);
+            Vector2 pos = new Vector2(_bodyTrans.position.x + _colider2D.offset.x, _bodyTrans.position.y + _colider2D.offset.y);
             Gizmos.DrawCube(pos, new Vector2(_colider2D.radius * 2, _colider2D.radius *2));
         }
     }

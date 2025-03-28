@@ -15,7 +15,7 @@ public class Ground : MonoBehaviour
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
-    
+        Init(_srcTexture);
     }
 
     public void Init(Texture2D texture)
@@ -57,10 +57,10 @@ public class Ground : MonoBehaviour
         MakeSprtie();
     }
 
-    public void MakeHole(CircleCollider2D circleCollider2D)
+    public void MakeHole(Vector3 pos, float radius)
     {
-        Vector2Int coliderCenter = WorldToPixel(circleCollider2D.bounds.center);
-        int radius = Mathf.RoundToInt(circleCollider2D.bounds.size.x /2 * _pixelWidth / _worldWidth);
+        int pixelRadius = Mathf.RoundToInt(radius * _pixelWidth / _worldWidth);
+        Vector2Int pixelPos = WorldToPixel(pos);
 
         int px;
         int py;
@@ -68,15 +68,15 @@ public class Ground : MonoBehaviour
         int ny;
         int dis;
 
-        for(int i = 0; i <= radius; i++)
+        for(int i = 0; i <= pixelRadius; i++)
         {
-            dis = Mathf.RoundToInt(Mathf.Sqrt(radius * radius - i * i));
+            dis = Mathf.RoundToInt(Mathf.Sqrt(pixelRadius * pixelRadius - i * i));
             for(int j =0; j <= dis; j++)
             {
-                px = coliderCenter.x + i;
-                nx = coliderCenter.x - i;
-                py = coliderCenter.y + j;
-                ny = coliderCenter.y - j;
+                px = pixelPos.x + i;
+                nx = pixelPos.x - i;
+                py = pixelPos.y + j;
+                ny = pixelPos.y - j;
 
                 if (px >= 0 && px < _pixelWidth && py >= 0 && py < _pixelHeight)
                     _newTexture.SetPixel(px, py, Color.clear);
@@ -102,24 +102,19 @@ public class Ground : MonoBehaviour
         gameObject.AddComponent<PolygonCollider2D>();
     }
 
-    public void MakeHoleEllipse(PolygonCollider2D collider2D)
+    public void MakeHoleEllipse(Vector3 pos, float radiusX, float radiusY)
     {
-        BombEllipse bombEllipse = collider2D.transform.parent.gameObject.GetComponent<BombEllipse>();
-        if (bombEllipse == null)
-            return;
-
-        Vector2Int colliderCenter = WorldToPixel(collider2D.bounds.center);
-
-        float radiusX = bombEllipse.RadiusX;
-        float radiusY = radiusX / bombEllipse.RadiusYRatio;
+        int pixelRadiusX = Mathf.RoundToInt(radiusX * _pixelWidth / _worldWidth);
+        int pixelRadiusY = Mathf.RoundToInt(radiusY * _pixelWidth / _worldWidth);
+        Vector2Int colliderCenter = WorldToPixel(pos);
 
         int px, py, nx, ny;
         int disY;
 
-        for (int i = 0; i <= radiusX; i++)
+        for (int i = 0; i <= pixelRadiusX; i++)
         {
             // 타원의 방정식 기반으로 y 범위 계산
-            disY = Mathf.RoundToInt(radiusY * Mathf.Sqrt(1 - (i * i) / (float)(radiusX * radiusX)));
+            disY = Mathf.RoundToInt(pixelRadiusY * Mathf.Sqrt(1 - (i * i) / (float)(pixelRadiusX * pixelRadiusX)));
 
             for (int j = 0; j <= disY; j++)
             {
@@ -165,17 +160,32 @@ public class Ground : MonoBehaviour
         return true; 
     }
 
-    private void OnTriggerEnter2D(Collider2D collision)
+    public void GroundExplosion(Vector3 pos, float radius, float radiusY = 0, eBombExplosionType explosionType = eBombExplosionType.Circle)
     {
-        CircleCollider2D bomb = collision.gameObject.GetComponent<CircleCollider2D>();
-        PolygonCollider2D bombEllipse = collision.gameObject.GetComponent<PolygonCollider2D>();
+        
+        switch(explosionType)
+        {
+            case eBombExplosionType.Circle:
+                MakeHole(pos, radius);
+                break;
 
-        if (bomb != null)
-            MakeHole(bomb);
-
-        if (bombEllipse != null)
-            MakeHoleEllipse(bombEllipse);
+            case eBombExplosionType.Ellipse:
+                MakeHoleEllipse(pos, radius, radiusY);
+                break;
+        }      
     }
+
+    //private void OnTriggerEnter2D(Collider2D collision)
+    //{
+    //    CircleCollider2D bomb = collision.gameObject.GetComponent<CircleCollider2D>();
+    //    PolygonCollider2D bombEllipse = collision.gameObject.GetComponent<PolygonCollider2D>();
+
+    //    if (bomb != null)
+    //        MakeHole(bomb);
+
+    //    if (bombEllipse != null)
+    //        MakeHoleEllipse(bombEllipse);
+    //}
   
     private void MakeSprtie()
     {

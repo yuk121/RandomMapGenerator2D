@@ -220,9 +220,8 @@ MonoBehaviour:
   _mapGroundPrefab: {fileID: 7806579868787359085, guid: af3738e0df4695943935fac817a35d8f, type: 3}
   _randGroundScaleMin: 0.5
   _randGroundScaleMax: 1.5
-  _groundUnderGenerationRatio: 0.1
-  _randGroundIntervalMin: 1
-  _randGroundIntervalMax: 3
+  _randGroundIntervalMin: 5
+  _randGroundIntervalMax: 10
 --- !u!1 &519420028
 GameObject:
   m_ObjectHideFlags: 0

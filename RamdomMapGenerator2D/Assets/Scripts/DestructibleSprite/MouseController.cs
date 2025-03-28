@@ -12,13 +12,33 @@ public class MouseController : MonoBehaviour
         {
             Vector2 mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
 
-            Instantiate(_bomb, mousePos, Quaternion.identity);
+            GameObject go = PoolManager.Instance.Pop(_bomb);
+
+            if (go == null)
+            {
+                go = Instantiate(_bomb, mousePos, Quaternion.identity);
+              
+                PoolManager.Instance.Push(go);
+            }
+
+            go.transform.position = mousePos;
+            Bomb bomb = go.GetComponent<Bomb>();
+            bomb.Init();
         }
-        if(Input.GetMouseButtonDown(2))
+        if (Input.GetMouseButtonDown(2))
         {
             Vector2 mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
 
-            Instantiate(_bombEllipse, mousePos, Quaternion.identity);
+            GameObject go = PoolManager.Instance.Pop(_bombEllipse.gameObject);
+            if (go == null)
+            {
+                go = Instantiate(_bombEllipse, mousePos, Quaternion.identity);
+                PoolManager.Instance.Push(go);
+            }
+
+            go.transform.position = mousePos;
+            BombEllipse bomb = go.GetComponent<BombEllipse>();
+            bomb.Init();
         }
     }
 }

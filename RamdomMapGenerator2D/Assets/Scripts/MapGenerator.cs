@@ -5,7 +5,7 @@ public class MapGenerator : MonoBehaviour
 {
     private enum eMapType
     {
-        None,
+        None = -1,
         Jungle,
         Desert,
         Ice,
@@ -16,17 +16,16 @@ public class MapGenerator : MonoBehaviour
     [SerializeField] private List<Texture2D> _mapGroundTextureList = new List<Texture2D>();
     [SerializeField] private Ground _mapGroundPrefab = null;
 
+    [Header("Scale")]
     [SerializeField] private float _randGroundScaleMin = 0.5f;        // 최소 땅 크기
     [SerializeField] private float _randGroundScaleMax = 1.5f;       // 최대 땅 크기
 
-    [Range(0.1f, 1f)]
-    [SerializeField] private float _groundUnderGenerationRatio;     // 땅 생성 비율
-
+    [Header("Interval")]
     [SerializeField] private float _randGroundIntervalMin = 1f;       // 최소 땅 간격
     [SerializeField] private float _randGroundIntervalMax = 3f;       // 최대 땅 간격
 
-
     private eMapType _mapType = eMapType.None;
+    private List<Rect> existingGrounds = new List<Rect>();           // 생성된 땅들의 영역 저장
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
@@ -47,44 +46,88 @@ public class MapGenerator : MonoBehaviour
 
     private void RandomGroundGeneration()
     {
-        // 땅과 하늘 구분하기
-        // 현재 카메라 시점의 월드 좌표로 하기
         float height = Camera.main.orthographicSize;
         float width = height * Camera.main.aspect;
 
-        // 땅 생성 범위 (-width~width), (-height~0)
-   
-       
-        // 땅 생성
-        Ground ground = Instantiate(_mapGroundPrefab);
-        ground.transform.parent = this.transform;
-        ground.Init(_mapGroundTextureList[(int)_mapType]);
+        int orderInLayerInc = 0;
+        int maxAttempts = 3; // 최대 시도 횟수
 
-        // 랜덤 크기 부여
-        float randScale = Random.Range(_randGroundScaleMin, _randGroundScaleMax);
-        ground.transform.localScale = ground.transform.localScale * randScale;
+        // 화면을 넘어가는 땅은 생성하지 않는다
+        for (int i = (int)-width; i < (int)width;)
+        {
+            // 땅 생성
+            Ground ground = Instantiate(_mapGroundPrefab);
+            ground.transform.parent = this.transform;
+            ground.Init(_mapGroundTextureList[(int)_mapType]);
 
-        // 랜덤 땅 간격
-        float randInterval = Random.Range(_randGroundIntervalMin, _randGroundIntervalMax);
+            // 레이어 순서 조정
+            SpriteRenderer sr = ground.GetComponent<SpriteRenderer>();
+            sr.sortingOrder += orderInLayerInc;
+            orderInLayerInc++;
+
+            // 랜덤 크기 설정
+            float randScale = Random.Range(_randGroundScaleMin, _randGroundScaleMax);
+            ground.transform.localScale *= randScale;
+
+            // 랜덤 위치 설정
+            int minHeight = -(int)height;
+            int maxHeight = minHeight - (minHeight / 2);
+
+            bool isValidPosition = false;
+            Vector3 newPosition = Vector3.zero;
+            Rect newGroundBounds = new Rect();
+
+            // 영역 겹칩 확인
+            for (int attempt = 0; attempt < maxAttempts; attempt++)
+            {
+                float groundPosX = i + Random.Range(_randGroundIntervalMin, _randGroundIntervalMax) * randScale;
+                float groundPosY = Random.Range(minHeight, maxHeight);
+
+                newGroundBounds = new Rect(
+                    groundPosX - (ground.transform.localScale.x * 0.5f),
+                    groundPosY - (ground.transform.localScale.y * 0.5f),
+                    ground.transform.localScale.x,
+                    ground.transform.localScale.y
+                );
+
+                bool isOverlapping = false;
+
+                foreach (Rect existing in existingGrounds)
+                {
+                    // 땅이 겹치는지 확인
+                    if (existing.Overlaps(newGroundBounds))
+                    {
+                        // 작은 땅이 더 큰 땅 안에 완전히 포함되는지 확인
+                        if (newGroundBounds.width <= existing.width && newGroundBounds.height <= existing.height &&
+                            existing.Contains(new Vector2(newGroundBounds.xMin, newGroundBounds.yMin)) &&
+                            existing.Contains(new Vector2(newGroundBounds.xMax, newGroundBounds.yMax)))
+                        {
+                            isOverlapping = true;
+                            break; // 내부에 포함되면 다시 위치 찾기
+                        }
+                    }
+                }
+
+                if (!isOverlapping)
+                {
+                    newPosition = new Vector3(groundPosX, groundPosY, 0);
+                    existingGrounds.Add(newGroundBounds);
+                    isValidPosition = true;
+                    break;
+                }
+            }
+
+            if (isValidPosition)
+            {
+                ground.transform.position = newPosition;
+            }
+            else
+            {              
+                Destroy(ground); // 적절한 위치를 찾지 못한 경우 제거
+            }
+
+            // 다음 위치 계산 (간격 랜덤)
+            i += (int)(Random.Range(_randGroundIntervalMin, _randGroundIntervalMax) * randScale);
+        }
     }
-
-    //public float MakeNoise(int width, int height)
-    //{
-    //    float amplitude = _amplitude;                             // 진폭
-    //    float frequnecy = noiseSettings.startFrequency;      // 빈도
-    //    float noiseSum = 0;
-    //    float amplitudeSum = 0;
-
-    //    for (int i = 0; i < noiseSettings.octaves; i++)
-    //    {
-    //        noiseSum += amplitude * Mathf.PerlinNoise(x * frequnecy, y * frequnecy);
-    //        amplitudeSum += amplitude;
-    //        amplitude *= noiseSettings.persistance;
-    //        frequnecy *= noiseSettings.frequencyModifier;
-    //    }
-
-    //    float nomalize = noiseSum / amplitudeSum; // [0 - 1]
-
-    //    return nomalize;
-    //}
 }
