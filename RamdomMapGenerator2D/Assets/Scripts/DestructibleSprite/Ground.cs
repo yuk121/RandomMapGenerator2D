@@ -15,7 +15,6 @@ public class Ground : MonoBehaviour
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
-        Init(_srcTexture);
     }
 
     public void Init(Texture2D texture)
@@ -39,7 +38,7 @@ public class Ground : MonoBehaviour
         _pixelWidth = _spriteRenderer.sprite.texture.width;
         _pixelHeight = _spriteRenderer.sprite.texture.height;
 
-        PolygonCollider2D polC2D = gameObject.AddComponent<PolygonCollider2D>();
+        gameObject.AddComponent<PolygonCollider2D>();
     }
 
     public void MakeDot(Vector3 pos)
@@ -160,33 +159,21 @@ public class Ground : MonoBehaviour
         return true; 
     }
 
-    public void GroundExplosion(Vector3 pos, float radius, float radiusY = 0, eBombExplosionType explosionType = eBombExplosionType.Circle)
+    public void GroundExplosion(Vector3 pos, float radius, float radiusY = 0, eShellExplosionType explosionType = eShellExplosionType.Circle)
     {
         
         switch(explosionType)
         {
-            case eBombExplosionType.Circle:
+            case eShellExplosionType.Circle:
                 MakeHole(pos, radius);
                 break;
 
-            case eBombExplosionType.Ellipse:
+            case eShellExplosionType.Ellipse:
                 MakeHoleEllipse(pos, radius, radiusY);
                 break;
         }      
     }
 
-    //private void OnTriggerEnter2D(Collider2D collision)
-    //{
-    //    CircleCollider2D bomb = collision.gameObject.GetComponent<CircleCollider2D>();
-    //    PolygonCollider2D bombEllipse = collision.gameObject.GetComponent<PolygonCollider2D>();
-
-    //    if (bomb != null)
-    //        MakeHole(bomb);
-
-    //    if (bombEllipse != null)
-    //        MakeHoleEllipse(bombEllipse);
-    //}
-  
     private void MakeSprtie()
     {
         _spriteRenderer.sprite = Sprite.Create(_newTexture, new Rect(0, 0, _newTexture.width, _newTexture.height), Vector2.one * 0.5f);
@@ -205,17 +192,4 @@ public class Ground : MonoBehaviour
         return pixelPos;
     }
 
-    // Update is called once per frame
-    void Update()
-    {
-        //if(Input.GetMouseButtonDown(0))
-        //{
-        //    Vector2 mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-
-        //   if(Physics2D.OverlapCircle(mousePos, 0.01f, 1<< LayerMask.NameToLayer("Ground")))
-        //    {
-        //        MakeDot(mousePos);
-        //    }
-        //}
-    }
 }

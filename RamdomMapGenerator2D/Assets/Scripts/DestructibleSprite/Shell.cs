@@ -1,24 +1,40 @@
 using UnityEngine;
 
-public enum eBombExplosionType
+public enum eShellExplosionType
 {
     Circle,
     Ellipse,
 }
-public class Bomb : MonoBehaviour
+public class Shell : MonoBehaviour
 {
-    [SerializeField] private eBombExplosionType _explosinType;
+    [SerializeField] private eShellExplosionType _explosinType;
+    public eShellExplosionType ShellExplosionType { get => _explosinType; }
     [SerializeField] private float _durtaion = 3.5f;        // 객체의 지속시간
     [SerializeField] protected float _radius = 2.5f;
 
-    private float _endTime = 0f;
+    private Rigidbody2D _rb2D = null;
     protected BoxCollider2D _collider2D = null;
+
+    private float _endTime = 0f;
+    private float _power = 1f;
+    private bool _isFire = false;
 
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     protected virtual void Start()
     {
         _collider2D = GetComponent<BoxCollider2D>();
+    }
+
+    public void FixedUpdate()
+    {
+        if (_isFire)
+        {
+            _rb2D.AddForce(transform.position * _power);
+            float angle = Mathf.Atan2(_rb2D.linearVelocity.y, _rb2D.linearVelocity.x) * Mathf.Rad2Deg;
+            transform.eulerAngles = new Vector3(0,0,angle);
+        }
+
     }
 
     public void Update()
@@ -41,7 +57,15 @@ public class Bomb : MonoBehaviour
 
     public void Init()
     {
+        _rb2D = GetComponent<Rigidbody2D>();    
+        _isFire = false;
         _endTime = Time.time + _durtaion;
+    }
+
+    public void Fire(float power)
+    {
+        _power = power;
+        _isFire = true;
     }
 
     public virtual void CheckExplosion()

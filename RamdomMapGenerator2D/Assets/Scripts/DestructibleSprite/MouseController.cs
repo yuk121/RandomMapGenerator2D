@@ -22,8 +22,8 @@ public class MouseController : MonoBehaviour
             }
 
             go.transform.position = mousePos;
-            Bomb bomb = go.GetComponent<Bomb>();
-            bomb.Init();
+            Shell shell = go.GetComponent<Shell>();
+            shell.Init();
         }
         if (Input.GetMouseButtonDown(2))
         {
@@ -37,8 +37,8 @@ public class MouseController : MonoBehaviour
             }
 
             go.transform.position = mousePos;
-            BombEllipse bomb = go.GetComponent<BombEllipse>();
-            bomb.Init();
+            ShellEllipse shell = go.GetComponent<ShellEllipse>();
+            shell.Init();
         }
     }
 }

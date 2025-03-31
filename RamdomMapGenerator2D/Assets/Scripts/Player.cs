@@ -7,17 +7,24 @@ using UnityEngine;
 public class Player : MonoBehaviour
 {
     [Header("Body")]
-    [SerializeField] private Transform _bodyTrans;
     [SerializeField] private float _moveAngleThreshold = 70f;
     [SerializeField] private float _speed = 4f;
 
     [Header("Artillery")]
     [SerializeField] private Transform _artilleryTrans;
+    [SerializeField] private Transform _bulletPos;
+    [SerializeField] private float _artilleryRotateSpeed = 10f;
     [SerializeField] private float _minAngleArtillery = 0f;
     [SerializeField] private float _maxAngleArtillery = 85f;
 
-    private Rigidbody2D _rb2D = null;
-    private CircleCollider2D _colider2D = null;
+    [Header("Shell")]
+    [SerializeField] private List<GameObject> _shellList = new List<GameObject>();
+    [SerializeField] private float _shellPower = 1f;
+
+    private Rigidbody2D _rb2D = null;               // Tank RigidBody 2D
+    private CircleCollider2D _colider2D = null;     // Tank CircleCollider 2D
+    private GameObject _curShell = null;            // 현재 선택된 포탄    
+
     private float _dirY = 0;
     private float _dirX = 0;
     private bool _isMoveAngle = false;
@@ -25,24 +32,80 @@ public class Player : MonoBehaviour
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
-        _rb2D = GetComponent<Rigidbody2D>();
-        _colider2D = GetComponent<CircleCollider2D>();
+        Init();
     }
 
+    public void Init()
+    {
+        _rb2D = GetComponent<Rigidbody2D>();
+        _colider2D = GetComponent<CircleCollider2D>();
+
+        // Default
+        _curShell = _shellList[0];
+    }
     // Update is called once per frame
 
     private void Update()
     {
+        // 포탄 변경
+        if(Input.GetKeyDown(KeyCode.Alpha1))
+        {
+            if (_shellList[0] == null)
+            {
+                Debug.LogWarning("Shell 1 is Null");
+            }
+            else
+            {
+                // 1번 폭탄
+                _curShell = _shellList[0];
+            }
+        }
+        else if(Input.GetKeyDown(KeyCode.Alpha2)) 
+        {
+            if (_shellList[1] == null)
+            {
+                Debug.LogWarning("Shell 2 is Null");
+            }
+            else
+            {
+                // 2번 폭탄
+                _curShell = _shellList[1];
+            }
+        }
+
+        // 파워게이지 증가 시키기
+        if(Input.GetKey(KeyCode.Space))
+        {
+            
+        }
+       
+        // 포탄 발사
+        if(Input.GetKeyUp(KeyCode.Space))
+        {
+            Shell shell = GenerationShell();
+
+            if(shell == null)
+            {
+                Debug.LogWarning("Generation Shell is Null !!!");
+            }
+
+            // 발사
+            shell.Fire(_shellPower);
+
+            // 발사한 포탄 저장
+            _curShell = shell.gameObject;
+        }    
+
         _dirY = Input.GetAxis("Vertical");
         // 새로운 회전값 계산 (현재 회전 + 입력값)
        
-        float currentZ = _artilleryTrans.eulerAngles.z;
+        float currentZ = _artilleryTrans.localEulerAngles.z;
         
         if (currentZ > 180f) 
             currentZ -= 360f; // 180° 이상이면 -180° ~ 0°로 변환
 
-        float newZ = Mathf.Clamp(currentZ + _dirY * Time.deltaTime * 100f, _minAngleArtillery, _maxAngleArtillery);
-        _artilleryTrans.rotation = Quaternion.Lerp(_artilleryTrans.rotation, Quaternion.Euler(0,0,newZ), Time.deltaTime * 10);
+        float newZ = Mathf.Clamp(currentZ + _dirY * Time.deltaTime *_artilleryRotateSpeed, _minAngleArtillery, _maxAngleArtillery);
+        _artilleryTrans.localRotation = Quaternion.Lerp(_artilleryTrans.localRotation, Quaternion.Euler(0,0,newZ), Time.deltaTime * 10);
 
         // 포 각도 조절중 움직일 수 없음
         if (_dirY == 0 && IsGround())
@@ -50,20 +113,58 @@ public class Player : MonoBehaviour
             _dirX = Input.GetAxis("Horizontal");
 
             //_rb2D.MovePosition(transform.position + new Vector3(_dirX * _speed * Time.deltaTime, 0));
-            _bodyTrans.Translate(_dirX * _speed * Time.deltaTime, 0, 0, Space.World);
+            transform.Translate(_dirX * _speed * Time.deltaTime, 0, 0, Space.World);
 
             if (_dirX != 0f)
             {
-                Vector3 newScale = _bodyTrans.localScale;
+                Vector3 newScale = transform.localScale;
                 newScale.x = Mathf.Abs(newScale.x) * Mathf.Sign(_dirX); // 좌우 반전
-                _bodyTrans.localScale = newScale;
+                transform.localScale = newScale;
             }
         }
         else
         {
             // 공중일땐 수평 
-            _bodyTrans.rotation = Quaternion.Euler(0, 0, 0);
+            transform.rotation = Quaternion.Euler(0, 0, 0);
         }
+    }
+
+    private Shell GenerationShell()
+    {
+        GameObject go = PoolManager.Instance.Pop(_curShell.gameObject);
+
+        if (go == null)
+        {
+            go = Instantiate(_curShell, _bulletPos.position, Quaternion.identity);
+            PoolManager.Instance.Push(go);
+        }
+        else
+        {
+            go.transform.position = _bulletPos.position;
+        }
+        // 포탄 방향 
+
+        Vector3 newScale = go.transform.localScale;
+        newScale.x = Mathf.Abs(newScale.x) * Mathf.Sign(transform.localScale.x); // 좌우 반전
+        go.transform.localScale = newScale;
+
+        Shell shell = go.GetComponent<Shell>();
+
+        switch(shell.ShellExplosionType)
+        {
+            case eShellExplosionType.Circle:
+                shell.Init();
+                return shell;
+            
+            case eShellExplosionType.Ellipse:
+                ShellEllipse shellEllipse = go.GetComponent<ShellEllipse>();
+                shellEllipse.Init();
+                return shellEllipse;
+        }
+
+    
+
+        return null;
     }
 
     private bool IsGround()
@@ -72,14 +173,14 @@ public class Player : MonoBehaviour
         Vector2 center = (Vector2)_colider2D.bounds.center;
 
         // 항상 콜라이더의 기울기에 따라 ray 시작 위치를 계산
-        Vector2 ray1 = center + (Vector2)(-_bodyTrans.right * _colider2D.radius); // 왼쪽 끝
-        Vector2 ray2 = center + (Vector2)(_bodyTrans.right * _colider2D.radius);  // 오른쪽 끝
+        Vector2 ray1 = center + (Vector2)(-transform.right * _colider2D.radius); // 왼쪽 끝
+        Vector2 ray2 = center + (Vector2)(transform.right * _colider2D.radius);  // 오른쪽 끝
 
         float distance = 0.9f;// 0.75f;
 
         // 시각화 
-        Debug.DrawRay(ray1, -_bodyTrans.up * distance, Color.red);
-        Debug.DrawRay(ray2, -_bodyTrans.up * distance, Color.blue);
+        Debug.DrawRay(ray1, -transform.up * distance, Color.red);
+        Debug.DrawRay(ray2, -transform.up * distance, Color.blue);
 
         // 방향
         Vector2 direction = (Vector2)transform.up * -1f;
@@ -90,7 +191,7 @@ public class Player : MonoBehaviour
 
         //Linecast 
         //RaycastHit2D area = Physics2D.Linecast(ray1 + direction * distance, ray2 + direction * distance, LayerMask.GetMask("Ground"));
-        RaycastHit2D area = Physics2D.BoxCast(_bodyTrans.position, new Vector2(_colider2D.radius * 2, _colider2D.radius * 2), 0f,direction, distance,LayerMask.GetMask("Ground"));
+        RaycastHit2D area = Physics2D.BoxCast(transform.position, new Vector2(_colider2D.radius * 2, _colider2D.radius * 2), 0f,direction, distance,LayerMask.GetMask("Ground"));
 
         Debug.DrawLine(ray1 + direction * distance, ray2 + direction * distance, Color.magenta);
 
@@ -123,7 +224,7 @@ public class Player : MonoBehaviour
  
             if (_isMoveAngle)
             {          
-                transform.rotation = Quaternion.Euler(0, 0, targetAngle);
+                transform.rotation = Quaternion.Euler(transform.eulerAngles.x, transform.eulerAngles.y, targetAngle);
             }
         }
     }
@@ -143,10 +244,10 @@ public class Player : MonoBehaviour
 
     void OnDrawGizmos()
     {
-        if(_colider2D != null)
-        {
-            Vector2 pos = new Vector2(_bodyTrans.position.x + _colider2D.offset.x, _bodyTrans.position.y + _colider2D.offset.y);
-            Gizmos.DrawCube(pos, new Vector2(_colider2D.radius * 2, _colider2D.radius *2));
-        }
+        //if(_colider2D != null)
+        //{
+        //    Vector2 pos = new Vector2(transform.position.x + _colider2D.offset.x, transform.position.y + _colider2D.offset.y);
+        //    Gizmos.DrawCube(pos, new Vector2(_colider2D.radius * 2, _colider2D.radius *2));
+        //}
     }
 }

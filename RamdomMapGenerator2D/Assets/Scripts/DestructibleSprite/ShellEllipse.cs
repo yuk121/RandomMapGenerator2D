@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public class BombEllipse : Bomb
+public class ShellEllipse : Shell
 {
     [Header("Radius Y = Radius / RadiusY Ratio")]
     [SerializeField] private float _radiusYRatio = 2f;
@@ -21,7 +21,7 @@ public class BombEllipse : Bomb
 
             Ground ground = hitGround.collider.GetComponent<Ground>();
             float radiusY = _radius / _radiusYRatio;
-            ground.GroundExplosion(transform.position, _radius, radiusY, eBombExplosionType.Ellipse);
+            ground.GroundExplosion(transform.position, _radius, radiusY, eShellExplosionType.Ellipse);
 
             PoolManager.Instance.Push(gameObject);
         }
