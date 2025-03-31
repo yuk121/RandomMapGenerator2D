@@ -22,7 +22,7 @@ public class MapGenerator : MonoBehaviour
 
     [Header("Interval")]
     [SerializeField] private float _randGroundIntervalMin = 1f;       // 최소 땅 간격
-    [SerializeField] private float _randGroundIntervalMax = 3f;       // 최대 땅 간격
+    [SerializeField] private float _randGroundIntervalMax = 2f;       // 최대 땅 간격
 
     private eMapType _mapType = eMapType.None;
     private List<Rect> existingGrounds = new List<Rect>();           // 생성된 땅들의 영역 저장
@@ -80,7 +80,8 @@ public class MapGenerator : MonoBehaviour
             // 영역 겹칩 확인
             for (int attempt = 0; attempt < maxAttempts; attempt++)
             {
-                float groundPosX = i + Random.Range(_randGroundIntervalMin, _randGroundIntervalMax) * randScale;
+                // 청
+                float groundPosX = i == -(int)width ? i : i + Random.Range(_randGroundIntervalMin, _randGroundIntervalMax) * randScale;
                 float groundPosY = Random.Range(minHeight, maxHeight);
 
                 newGroundBounds = new Rect(

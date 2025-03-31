@@ -14,7 +14,7 @@ GameObject:
   - component: {fileID: 9099294427233415134}
   - component: {fileID: 5939656857367612657}
   m_Layer: 0
-  m_Name: BombElliptical
+  m_Name: ShellElliptical
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

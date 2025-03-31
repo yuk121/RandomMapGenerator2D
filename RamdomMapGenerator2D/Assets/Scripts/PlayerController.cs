@@ -4,7 +4,7 @@ using Unity.VisualScripting;
 using UnityEditor.PackageManager;
 using UnityEngine;
 
-public class Player : MonoBehaviour
+public class PlayerController : MonoBehaviour
 {
     private const float MAX_POWER = 20f;
     private const float MIN_POWER = 0.1f;
