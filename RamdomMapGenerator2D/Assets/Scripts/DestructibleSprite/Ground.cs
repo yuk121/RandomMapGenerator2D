@@ -1,3 +1,5 @@
+using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 
 public class Ground : MonoBehaviour
@@ -58,19 +60,21 @@ public class Ground : MonoBehaviour
 
     public void MakeHole(Vector3 pos, float radius)
     {
-        int pixelRadius = Mathf.RoundToInt(radius * _pixelWidth / _worldWidth);
+        // 월드 크기와 실제 오브젝트의 크기를 반영하여 픽셀 변환
+        float scaleFactorX = transform.localScale.x;
+        float scaleFactorY = transform.localScale.y;
+
+        int pixelRadiusX = Mathf.RoundToInt((radius / scaleFactorX) * (_pixelWidth / _worldWidth));
+        int pixelRadiusY = Mathf.RoundToInt((radius / scaleFactorY) * (_pixelHeight / _worldHeight));
+
         Vector2Int pixelPos = WorldToPixel(pos);
 
-        int px;
-        int py;
-        int nx;
-        int ny;
-        int dis;
+        int px, py, nx, ny, dis;
 
-        for(int i = 0; i <= pixelRadius; i++)
+        for (int i = 0; i <= pixelRadiusX; i++)
         {
-            dis = Mathf.RoundToInt(Mathf.Sqrt(pixelRadius * pixelRadius - i * i));
-            for(int j =0; j <= dis; j++)
+            dis = Mathf.RoundToInt(Mathf.Sqrt(pixelRadiusY * pixelRadiusY * (1 - (i * i) / (float)(pixelRadiusX * pixelRadiusX))));
+            for (int j =0; j <= dis; j++)
             {
                 px = pixelPos.x + i;
                 nx = pixelPos.x - i;
@@ -103,8 +107,12 @@ public class Ground : MonoBehaviour
 
     public void MakeHoleEllipse(Vector3 pos, float radiusX, float radiusY)
     {
-        int pixelRadiusX = Mathf.RoundToInt(radiusX * _pixelWidth / _worldWidth);
-        int pixelRadiusY = Mathf.RoundToInt(radiusY * _pixelWidth / _worldWidth);
+        float scaleFactorX = transform.localScale.x;
+        float scaleFactorY = transform.localScale.y;
+
+        int pixelRadiusX = Mathf.RoundToInt((radiusX / scaleFactorX) * (_pixelWidth / _worldWidth));
+        int pixelRadiusY = Mathf.RoundToInt((radiusY / scaleFactorY) * (_pixelHeight / _worldHeight));
+
         Vector2Int colliderCenter = WorldToPixel(pos);
 
         int px, py, nx, ny;
@@ -140,10 +148,7 @@ public class Ground : MonoBehaviour
         MakeSprtie();
 
         if (IsTransparent(_newTexture))
-        {
             Destroy(gameObject);
-            return;
-        }
 
         Destroy(gameObject.GetComponent<PolygonCollider2D>());
         gameObject.AddComponent<PolygonCollider2D>();
@@ -183,11 +188,16 @@ public class Ground : MonoBehaviour
     {
         Vector2Int pixelPos = Vector2Int.zero;
 
-        var dx = pos.x - transform.position.x;
-        var dy = pos.y - transform.position.y;
+        // Ground 오브젝트의 월드 영역을 구함 (localScale 반영)
+        float adjustedWorldWidth = _worldWidth * transform.localScale.x;
+        float adjustedWorldHeight = _worldHeight * transform.localScale.y;
 
-        pixelPos.x = Mathf.RoundToInt(0.5f * _pixelWidth + dx * (_pixelWidth / _worldWidth));
-        pixelPos.y = Mathf.RoundToInt(0.5f * _pixelHeight + dy * (_pixelHeight / _worldHeight));
+        float minX = transform.position.x - (adjustedWorldWidth * 0.5f);
+        float minY = transform.position.y - (adjustedWorldHeight * 0.5f);
+
+        // pos를 픽셀 좌표로 변환 (localScale을 고려)
+        pixelPos.x = Mathf.RoundToInt((pos.x - minX) / adjustedWorldWidth * _pixelWidth);
+        pixelPos.y = Mathf.RoundToInt((pos.y - minY) / adjustedWorldHeight * _pixelHeight);
 
         return pixelPos;
     }

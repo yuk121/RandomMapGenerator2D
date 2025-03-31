@@ -19,7 +19,6 @@ public class Shell : MonoBehaviour
     private float _power = 1f;
     private bool _isFire = false;
 
-
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     protected virtual void Start()
     {
@@ -30,16 +29,25 @@ public class Shell : MonoBehaviour
     {
         if (_isFire)
         {
-            _rb2D.AddForce(transform.position * _power);
-            float angle = Mathf.Atan2(_rb2D.linearVelocity.y, _rb2D.linearVelocity.x) * Mathf.Rad2Deg;
-            transform.eulerAngles = new Vector3(0,0,angle);
+            _isFire = false;
+            Vector2 fireDir = transform.right * Mathf.Sign(transform.localScale.x);
+            _rb2D.AddForce(fireDir * _power, ForceMode2D.Impulse);
         }
 
+        float angle = Mathf.Atan2(_rb2D.linearVelocity.y, _rb2D.linearVelocity.x) * Mathf.Rad2Deg;
+        
+        // 탱크가 좌측을 바라볼 때 180도 추가
+        if (transform.localScale.x < 0)
+        {
+            angle += 180f;
+        }
+
+        transform.eulerAngles = new Vector3(transform.eulerAngles.x, transform.eulerAngles.y, angle);
     }
 
     public void Update()
     {
-        CheckExplosion();
+          CheckExplosion();
 
         // 지속시간이 끝나면 없애기
         if (Time.time >= _endTime)
@@ -57,7 +65,7 @@ public class Shell : MonoBehaviour
 
     public void Init()
     {
-        _rb2D = GetComponent<Rigidbody2D>();    
+        _rb2D = GetComponent<Rigidbody2D>();
         _isFire = false;
         _endTime = Time.time + _durtaion;
     }
@@ -70,21 +78,36 @@ public class Shell : MonoBehaviour
 
     public virtual void CheckExplosion()
     {
-        Debug.DrawRay(transform.position, Vector2.down * 0.5f, Color.magenta);
+        Debug.DrawRay(transform.position, Vector2.down * 0.2f, Color.magenta);
 
-        RaycastHit2D hitPlayer = Physics2D.BoxCast(transform.position, _collider2D.size, transform.eulerAngles.z, Vector2.down, 0.5f, LayerMask.GetMask("Player"));
-        RaycastHit2D hitGround = Physics2D.BoxCast(transform.position, _collider2D.size, transform.eulerAngles.z, Vector2.down, 0.5f, LayerMask.GetMask("Ground"));
+        // BoxCollider2D의 중심과 크기를 가져오기
+        Vector2 colliderCenter = (Vector2)transform.position + _collider2D.offset;
+        Vector2 colliderSize = _collider2D.size+(Vector2.one * 0.05f);
 
-        if (hitPlayer || hitGround)
+        // BoxCast를 사용하여 플레이어 또는 땅의 충돌 감지
+        RaycastHit2D hit = Physics2D.BoxCast(colliderCenter, colliderSize, transform.eulerAngles.z, Vector2.down, 0f, LayerMask.GetMask("Player", "Ground"));
+
+        // 충돌 확인 시
+        if (hit.collider != null)
         {
-            if (hitPlayer.collider != null)
+            // CircleCast를 사용하여 폭발 범위에 있는 객체 List 가져오기
+            Collider2D[] hitPlayerList = Physics2D.OverlapCircleAll(colliderCenter, _radius, LayerMask.GetMask("Player"));
+            Collider2D[] hitGroundList = Physics2D.OverlapCircleAll(colliderCenter, _radius, LayerMask.GetMask("Ground"));
+            if (hitPlayerList.Length > 0)
             {
                 // 데미지 주기
             }
 
-            Ground ground = hitGround.collider.GetComponent<Ground>();
-            ground.GroundExplosion(transform.position, _radius);
+            if (hitGroundList.Length > 0)
+            {
+                foreach (var hitGround in hitGroundList)
+                {
+                    Ground ground = hitGround.GetComponent<Ground>();
+                    ground.GroundExplosion(colliderCenter, _radius);
+                }
+            }
 
+            // 충돌한 경우에만 Pool
             PoolManager.Instance.Push(gameObject);
         }
     }

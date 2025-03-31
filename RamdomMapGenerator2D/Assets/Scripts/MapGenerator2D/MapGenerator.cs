@@ -14,7 +14,7 @@ namespace PROCEDURAL_MAP
         [Header("Map")]
         [SerializeField] private int _mapLength = 0;           // ±æÀÌ
         [SerializeField] private float _amplitude = 1;          // ÁøÆø
-                                                                //[SerializeField] private float _frequency = 0.01f;      // ºóµµ
+                                            
         [SerializeField] private Transform _gridTrans = null;
 
         [Header("Tile")]

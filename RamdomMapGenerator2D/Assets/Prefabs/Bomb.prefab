@@ -176,5 +176,5 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _explosinType: 0
-  _durtaion: 3.5
+  _durtaion: 7
   _radius: 2.5

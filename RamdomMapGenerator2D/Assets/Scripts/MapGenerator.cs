@@ -67,7 +67,7 @@ public class MapGenerator : MonoBehaviour
 
             // 랜덤 크기 설정
             float randScale = Random.Range(_randGroundScaleMin, _randGroundScaleMax);
-            ground.transform.localScale *= randScale;
+            ground.transform.localScale = new Vector2(randScale, randScale);
 
             // 랜덤 위치 설정
             int minHeight = -(int)height;

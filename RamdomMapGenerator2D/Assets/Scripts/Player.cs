@@ -6,6 +6,9 @@ using UnityEngine;
 
 public class Player : MonoBehaviour
 {
+    private const float MAX_POWER = 20f;
+    private const float MIN_POWER = 0.1f;
+
     [Header("Body")]
     [SerializeField] private float _moveAngleThreshold = 70f;
     [SerializeField] private float _speed = 4f;
@@ -19,7 +22,10 @@ public class Player : MonoBehaviour
 
     [Header("Shell")]
     [SerializeField] private List<GameObject> _shellList = new List<GameObject>();
-    [SerializeField] private float _shellPower = 1f;
+    [SerializeField] private float _maxShellPower = 20f;
+    [SerializeField] private float _minShellPower = 0.1f;
+    [SerializeField] private float _curShellPower = 1f;
+    [SerializeField] private float _powerGaugeSpeed = 1f;
 
     private Rigidbody2D _rb2D = null;               // Tank RigidBody 2D
     private CircleCollider2D _colider2D = null;     // Tank CircleCollider 2D
@@ -28,6 +34,8 @@ public class Player : MonoBehaviour
     private float _dirY = 0;
     private float _dirX = 0;
     private bool _isMoveAngle = false;
+    private float _curGauge = 0f;
+    private float _prevShellPower = 0f;
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
@@ -48,7 +56,7 @@ public class Player : MonoBehaviour
     private void Update()
     {
         // 포탄 변경
-        if(Input.GetKeyDown(KeyCode.Alpha1))
+        if (Input.GetKeyDown(KeyCode.Alpha1))
         {
             if (_shellList[0] == null)
             {
@@ -60,7 +68,7 @@ public class Player : MonoBehaviour
                 _curShell = _shellList[0];
             }
         }
-        else if(Input.GetKeyDown(KeyCode.Alpha2)) 
+        else if (Input.GetKeyDown(KeyCode.Alpha2))
         {
             if (_shellList[1] == null)
             {
@@ -74,46 +82,52 @@ public class Player : MonoBehaviour
         }
 
         // 파워게이지 증가 시키기
-        if(Input.GetKey(KeyCode.Space))
+        if (Input.GetKey(KeyCode.Space))
         {
-            
+            _curGauge += Time.deltaTime * _powerGaugeSpeed;
+            _curShellPower = Mathf.Lerp(_minShellPower, _maxShellPower, _curGauge);
         }
-       
+
         // 포탄 발사
-        if(Input.GetKeyUp(KeyCode.Space))
+        if (Input.GetKeyUp(KeyCode.Space))
         {
+            _curGauge = 0f;
             Shell shell = GenerationShell();
 
-            if(shell == null)
+            if (shell == null)
             {
                 Debug.LogWarning("Generation Shell is Null !!!");
             }
 
             // 발사
-            shell.Fire(_shellPower);
+            shell.Fire(_curShellPower);
 
             // 발사한 포탄 저장
             _curShell = shell.gameObject;
-        }    
+            // 이전 포탄 파워 값 저장
+            _prevShellPower = _curShellPower;
+        }
 
         _dirY = Input.GetAxis("Vertical");
         // 새로운 회전값 계산 (현재 회전 + 입력값)
-       
+
         float currentZ = _artilleryTrans.localEulerAngles.z;
-        
-        if (currentZ > 180f) 
+
+        if (currentZ > 180f)
             currentZ -= 360f; // 180° 이상이면 -180° ~ 0°로 변환
 
-        float newZ = Mathf.Clamp(currentZ + _dirY * Time.deltaTime *_artilleryRotateSpeed, _minAngleArtillery, _maxAngleArtillery);
-        _artilleryTrans.localRotation = Quaternion.Lerp(_artilleryTrans.localRotation, Quaternion.Euler(0,0,newZ), Time.deltaTime * 10);
+        float newZ = Mathf.Clamp(currentZ + _dirY * Time.deltaTime * _artilleryRotateSpeed, _minAngleArtillery, _maxAngleArtillery);
+        Quaternion quaternion = Quaternion.Euler(transform.rotation.eulerAngles.x, transform.eulerAngles.y, newZ);
+        _artilleryTrans.localRotation = Quaternion.Lerp(_artilleryTrans.localRotation, quaternion, Time.deltaTime * 10);
 
-        // 포 각도 조절중 움직일 수 없음
-        if (_dirY == 0 && IsGround())
+        // 땅 위에 있는지 확인
+        if (IsGround())
         {
             _dirX = Input.GetAxis("Horizontal");
 
-            //_rb2D.MovePosition(transform.position + new Vector3(_dirX * _speed * Time.deltaTime, 0));
-            transform.Translate(_dirX * _speed * Time.deltaTime, 0, 0, Space.World);
+            // 포 각도 조절중에는 움직일 수 없음
+            if (_dirY == 0)
+               transform.Translate(_dirX * _speed * Time.deltaTime, 0, 0, Space.World);
 
             if (_dirX != 0f)
             {
@@ -138,10 +152,10 @@ public class Player : MonoBehaviour
             go = Instantiate(_curShell, _bulletPos.position, Quaternion.identity);
             PoolManager.Instance.Push(go);
         }
-        else
-        {
-            go.transform.position = _bulletPos.position;
-        }
+            
+        go.transform.position = _bulletPos.position;
+        go.transform.rotation = Quaternion.Euler(0, 0, _artilleryTrans.eulerAngles.z);
+        
         // 포탄 방향 
 
         Vector3 newScale = go.transform.localScale;
@@ -161,9 +175,6 @@ public class Player : MonoBehaviour
                 shellEllipse.Init();
                 return shellEllipse;
         }
-
-    
-
         return null;
     }
 
